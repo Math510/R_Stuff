@@ -1,0 +1,328 @@
+---
+title: "Introduction to R"
+output: html_document
+---
+
+__R is a language and environment for statistical computing and graphics.^1^__
+
+R is an integrated suite of software facilities for data manipulation, calculation and graphical display. It includes:
+
+* an effective data handling and storage facility,
+* a suite of operators for calculations on arrays, in particular matrices,
+* a large, coherent, integrated collection of intermediate tools for data analysis,
+* graphical facilities for data analysis and display either on-screen or on hardcopy, 
+* a well-developed, simple and effective programming language which includes conditionals, loops, user-defined recursive functions and input and output facilities.
+
+The term "environment" is intended to characterize it as a fully planned and coherent system, rather than an incremental accretion of very specific and inflexible tools, as is frequently the case with other data analysis software.
+
+R, like S, is designed around a true computer language, and it __allows users to add additional functionality__ by defining new functions. Much of the system is itself written in the R dialect of S, which makes it easy for users to follow the algorithmic choices made. For computationally-intensive tasks, C, C++ and Fortran code can be linked and called at run time. __Advanced users can write C code to manipulate R objects directly.__
+
+Many users think of R as a statistics system. We prefer to think of it of an environment within which statistical techniques are implemented. R can be extended (easily) via __packages__. There are about __eight packages supplied with the R distribution__ and many more are available through the CRAN family of Internet sites covering a very wide range of modern statistics.
+
+1. This introduction is taken directly from the R project web site http://www.r-project.org/about.html 
+
+## HOW TO THINK ABOUT R
+Although we don’t have enough time to delve deeply into all aspects of R, what I hope to push you towards is to develop your own strategies and tactics to struggle through (successfully!) using R to implement analysis using unfamiliar techniques (packages). 
+
+R is, in a sense, an object-oriented language.
+
+1. Everything in R is considered an object
+2. R supports encapsulation (grouping distinct but related data items into a single object class instance)
+3. R is polymorphic (a function call can lead to different operations for objects of different classes enabling generic functions)
+4. R allows inheritance (extending a given class to a more specialized class)
+
+Examples of generic functions: print(), str(), summary()
+
+Objects in R are instances of R classes.  An R class is simply a definition of elements that make up the object and the methods (operations) you can perform on that object.  There are multiple ways to discover the class of an object but the simplest is by using the class() function.
+
+Classes are used by generic functions. A generic function is a actually a family of functions like summary().  Summary()  provides output tailored to the specific class of data passed to the function.
+
+An S3 class (still the dominant class paradigm in R) consists of a list of class names and dispatch capabilities (for each class name there is a dispatch capability – dispatch capability is analogous to method or operation). For example, if you type print on the command line, you can see (below) that the print function is simply a call to UseMethod(“print”).
+
+```{r}
+print
+class(print)
+```
+
+Based on the packages I have loaded, there are 220 methods available to print. I’ve just provided a sample below and notice that ggplot has its own print method.
+
+```{r}
+methods(print)
+```
+Partial output:
+...
+[66] print.data.frame                             
+ [67] print.Date                                   
+ [68] print.default                                
+ [69] print.dendrogram*                            
+ [70] print.density*                               
+ [71] print.difftime                               
+ [72] print.dist*                                  
+ [73] print.DLLInfo                                
+ [74] print.DLLInfoList                            
+ [75] print.DLLRegisteredRoutines                  
+ [76] print.dummy_coef*                            
+ [77] print.dummy_coef_list*                       
+ [78] print.ecdf*                                  
+ [79] print.element*                               
+ [80] print.facet*                                 
+ [81] print.factanal*                              
+ [82] print.factor                                 
+ [83] print.family*                                
+ [84] print.fileSnapshot*                          
+ [85] print.findLineNumResult*                     
+ [86] print.fitdistr*                              
+ [87] print.flatGridListing*                       
+ [88] print.formula*                               
+ [89] print.fractions*                             
+ [90] print.ftable*                                
+ [91] print.function                               
+ [92] print.gamma.shape*                           
+ [93] print.getAnywhere*                           
+ [94] print.ggplot*  
+ ...
+ 
+Why should you care? Primarily because I don’t need to remember or look-up 220 different print functions based on the object I would like to print.
+
+Referring to your future ggplot homework, this is important because the parameters for the print command depend on the method being called (which of course is associated with the object instance passed to the generic function).
+
+Compare the help panels for these two calls:
+
+```{r}
+require("ggplot2")
+?print
+?print.ggplot
+```
+
+The ggplot print method includes the vp= parameter. To successfully complete your homework, you need to create the “what” (these are the three plot variables created using ggplot constructs) and then the “where” (these are the viewport definitions created using grid constructs). The vp= parameter refers to the “where”.
+
+Every object in R has a definition and we can find out what’s included in an instance of an object using the str() function. This even works to some extent to view the parameters of a function but, ?<function_name> works better if the documentation is decent.
+
+Lets look at the structure of an instance of a plot object created using ggplot (at the very bottom you also notice that the class of this object is “gg” “ggplot”):
+
+```{r}
+# Load grid package
+require("grid")
+
+# Bring Diamonds data into memory
+data(diamonds)
+str(diamonds)
+
+# Plot relationship of carat on price by color
+carat_prc <- ggplot(diamonds, aes(x=carat,y=price))
+carat_prc <- carat_prc + labs(title="Diamonds - Weight to Price by Color") +
+  theme(plot.title = element_text(size = rel(2), colour = "blue")) +
+  labs(x="Weight", y="Price") + 
+  geom_point(aes(color = factor(color)))
+
+print(carat_prc)
+# Now that we've created a ggplot object instance, let's look at its structure
+str(carat_prc)
+```
+
+The “grammar” of graphics from an R perspective is really about the process of setting attributes in a ggplot object instance to control the rendering of a plot (what a plot looks like).  Because you can build plots in layers, the order of the process matters and can help simplify the task. The grid package provides a set of functions and object classes (viewport being the primary object class) to position plots within a space. In the same sense, positioning objects is about learning the process of setting the attributes and calling the proper functions to set up the plotting space.
+
+##Getting help in R
+
+Now let's look at the help that's built into R.
+
+```{r}
+# This is not strictly needed when using R Studio because help us already available
+# in the catch all panel in the lower right quandrant. From the R command line, this
+# will start a browser session for R Help.
+# help.start()
+help('[[')
+help(ggplot)
+example(ggplot)
+```
+
+Hypothetically, you may need the grid package in an upcoming assignment. Here’s one approach to exploring the grid package.
+
+Here's a way to find help about a specific package.
+
+Grid documentation is easy to access in R-Studio by selecting the Packages tab (in the pane with Files, Help, Plots, Viewer tabs).  Find the grid package and click on the link.  This opens Grid documentation in the Help Tab.
+
+```{r}
+example(grid)
+```
+
+## R Basics
+
+```{r}
+# Show what's in the workspace
+objects()
+
+# Vectors
+x <- c(10.4, 5.6, 3.1, 6.4, 21.7)
+
+c(10.4, 5.6, 3.1, 6.4, 21.7) -> x2
+
+1/x
+
+# Build a larger vector from x
+newx <- c(x, 0, x)
+print(newx)
+
+var(x)
+?var
+
+myvar <- sum((x - mean(x))^2)/(length(x)-1)
+class(myvar)
+print(myvar)
+
+# Complex numbers
+sqrt(-17)
+
+sqrt(-17+0i)
+
+# Vector sequences
+c(1:30)
+
+c(2*1:15)
+
+seq(1, 30, by=2)
+seq(2, 30, by=2)
+
+n <- 10
+c(1:n-1)
+c(1:(n-1))
+c((1:n)-1)
+c(1:n)
+c(n:1)
+
+# Logical vectors
+
+temp <- x > 5
+temp
+```
+
+
+## Going farther...
+
+Statistics requires the concept of missing values (unknown data for a particular observation), and R represents missing values with __NA__.
+
+R also has the concept of "doesn't exist", which is represented by __NULL__.
+
+```{r}
+miss1 <- c(88, NA, 12, 168, 13)
+miss2 <- c(88, NULL, 12, 168, 13)
+mean(miss1)
+mean(miss2)
+mean(miss1, na.rm=TRUE)
+
+# Initialize z1 to NULL and put even numbers into a vector
+z1 <- NULL
+z1
+for (i in 1:20) if (i %% 2 == 0) z1 <- c(z1,i)
+z1
+
+z2 <- NA
+z2
+for (i in 1:20) if (i %%2 == 0) z2 <- c(z2,i)
+z2
+```
+
+##Implicit Loops
+
+Building on the previous discussion of objects, because R uses generic functions that use class specific methods (or Dispatch Capabilities) to operate on objects, the methods can “assume” that you want to apply an operation to an entire vector without have to write an explicit loop to traverse through each element of the vector or matrix or whatever class of object you’re dealing with at the time.
+
+```{r}
+# Two implementations of the same problem
+# Explicit looping
+b1 <- c(3, 4, 8, 23, 25, 7, 1, 23, 1, 9, 14, 22, 1, 0, 32)
+first1 <- function(x) {
+  for (i in 1:length(x)) { if (x[i] == 1) break #break out of loop
+  }
+  return(i)
+}
+first1(b1)
+
+# take advantage of implicit looping in the which function
+# the disadvantage is that the function will cycle through
+# the entire vector to create a boolean values and then return
+# the index of the first place where the condition is true
+# For a very large vector, this might be less efficient 
+# than an explicit loop that terminates when the first
+# value is found.
+first1a <- function(x) return (which (x == 1)[1])
+first1a(b1)
+```
+
+In addition to the standard if – else constructs found in other languages, R also has a vectorized if-then-else function called __ifelse()__. 
+
+Here’s an example:
+
+```{r}
+c1 <- 1:10
+c2 <- ifelse(c1 %% 2 == 0, "EVEN", "ODD")
+c2
+```
+
+What happens here is that the expression c1 %%2 == 0 results in a vector:
+[F, T, F, T, F, T, F, T, F, T].  The second argument is treated as a vector [“EVEN” , “EVEN”, .., “EVEN”] with the same number of elements as c1 created by recycling. The third argument is treated as a vector [“ODD”, “ODD”, .., “ODD”] the same size as c1, also created by recycling. The resulting vector c2 will be the same size as c1. At the positions in the boolean vector that are TRUE, "EVEN" will be placed into the resulting vector c2, otherwise "ODD" will be placed into the resulting vector c2.
+
+How will this operations handle NA?
+
+```{r}
+c3 <- c(NA, 1:10, NA, NA)
+c4 <- ifelse(c3 %% 2 == 0, "EVEN", "ODD")
+c4
+```
+
+Here's another example:
+```{r}
+c5 <- c(9,2,12,5,16,4)
+c6 <- ifelse(c5 > 6, 2*c5, 3*c5)
+c6
+```
+
+Now let’s look at a measure of association based on Kendall’s Tau using __ifelse__ and implicit looping using __lapply__.
+
+```{r}
+# Using ifelse to create an association measure based
+# on made up data.
+AirTemp <- c(5, 12, 13, 3, 6, 0, 1, 15, 16, 8, 88)
+Pressure <- c(4, 2, 3, 23, 6, 10, 11, 12, 6, 3, 2)
+
+# The measure is defined as the proportion of time
+# that AirTemp and Presure move in the same direction
+
+# findud() converts vector v to 1s and -1s representing
+# whether an element is increasing or decreasing relative
+# to the previous element. Output length will necessarily
+# be one less than input. v[-1] is a vector of 15 elements
+# starting with the second element (removes 1st element)
+# v[-length(v)] is also a vector of 15 elements starting
+# with the first element but removing the last.
+# Then use ifelse to create a 1 for a positive change
+# and a -1 for a negative change
+findud <- function(v) {
+  vud <- v[-1] - v[-length(v)]
+  return (ifelse(vud > 0, 1, -1))
+}
+
+# Instead of making two separate function calls, use
+# lapply to "apply" the findud function to the two
+# vectors x and y. ud[[1]] == ud[[2]] returns a boolean
+# vector which is treated as 1's and 0's by the function
+# mean, i.e. the mean of 4 1's and 6 0's is 0.4 or the
+# proportion of 1's contained in the vector.
+udcorr <- function (x,y) {
+  ud <- lapply(list(x,y), findud)
+  print(ud)
+  return(mean(ud[[1]] == ud[[2]]))
+}
+
+prop1 <- udcorr(AirTemp, Pressure)
+prop1
+
+# Investigate the sign and diff functions to see why this works.
+# A more compact way to accomplish the same task.
+udcorr2 <- function(x,y) mean(sign(diff(x)) == 
+                              sign(diff(y)))
+prop2 <- udcorr2(AirTemp, Pressure)
+prop2
+
+```
+
+
