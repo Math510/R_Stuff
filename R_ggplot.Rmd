@@ -1,0 +1,287 @@
+---
+title: "R - ggplot"
+output: html_document
+---
+
+#Plotting in R
+
+R's base graphics: implemented in the same way as in the Bell Labs S3 system developed by Becker, Chambers, and Wilks.
+
+__grid__ was designed by Paul Murrell to overcome some of these limitations and as a result packages like lattice, __ggplot2__, vcd or hexbin (on Bioconductor) use grid for the underlying primitives.
+
+__Plotting:__ plotrix, vcd, hexbin (on Bioconductor ), gclus and gplots  
+__Graphic Applications:__ This area aids in creating effective displays.  
+•  Effect ordering: gclus,cba and seriation  
+•  Large Data Sets: ash, hexbin, scagnostics  
+•  Trees and Graphs: ape, ade4, igraph, diagram, Rgraphviz  
+__Graphics Systems:__ lattice, __ggplot2__  
+__Devices:__ cairoDevice, RGtk2, RSvgDevice, rgl, JavaGD.   
+__Colors:__ colorspace, RColorBrewer. dichromat
+__Interactive Graphics:__ rggobi (Ggobi), iplots, iwidgets, playwith  
+__Development: grid, rgl, RoSuDA, gridBase  
+
+CRAN Task View: Graphic Displays & Dynamic Graphics & Graphic Devices & Visualization
+
+#ggplot2  
+  
+•  Based on the grammar of graphics (Wilkinson,2005)  
+•  Hadley Wickham(2005+): Primacy of layers and adaptation for embedding in R  
+•  Grammar tells us that a statistical graphic, drawn on a coordinate system, is a mapping from data to aesthetic attributes (color, shape, size) of geometric objects (points, lines, bars) potentially containing statistical transformations and facets of the data.  
+   
+Most graphic packages are a collection of special cases, __but ggplot is__   
+•  Designed to be layered  
+•  Produce graphics using structured thinking  
+•  Encourages the creation of totally new graphics  
+•  Easily combine existing plots  
+•  Represent multiple data sets  
+
+#ggplot2 Grammer  
+•  data  
+•  aesthetic mappings    
+•  geoms  
+•  stats  
+•  scales  
+•  coord system   
+
+#What is a plot?  
+1.  Default dataset and mappings from variables to aesthetics  
+2.  One or more layers   
+    • Geom   
+    •	Stat  
+    •	Position adjustment  
+    •	Dataset  
+    •	Aesthetic mappings (optional)  
+3.  Scale  
+4.  Coordinate system  
+5.  Faceting specification  
+
+#What is a layer
+Responsible for creating objects perceived on a plot
+•  Data and aesthetic mapping  
+•  Statistical transformation (stat)   
+•  Geometric object (geom)  
+•  Position adjustment  
+
+#What is a Scale
+•  Controls mapping from data to aesthetic attributes  
+•  Operates across all data in the plot  
+•  Ensures consistent mapping  
+•  Example: Color Gradient – Maps a segment of a real line to a path through the color space
+
+#What is a Coordinate system
+Maps the position of objects onto the plane of the plot.  
+•  Cartesian most common  
+•  Polar  
+•  Various map projections  
+•  Affect all position variables simultaneously  
+•  Change the appearance of geometric objects  
+•  Scaling is performed before statistical transformation, coordinate transformations after.  
+
+#What is a Facet  
+•  General case of conditioned or trellised plots  
+•  Makes it easy to plot different subsets of the data  
+
+#How to Render a ggplot  
+•  Print()–Renders to the screen  
+•  ggsave()–Renders to a disk  
+•  save()–Saves a cached copy (including data!)  
+
+#geoms
+geom_abline geom_area geom_bar geom_bin2d geom_blank geom_boxplot geom_contour geom_crossbar geom_density geom_density2d geom_dotplot geom_errorbar geom_errorbarh
+geom_freqpoly geom_hex geom_histogram geom_hline geom_jitter geom_line geom_linerange geom_map geom_path geom_point geom_pointrange geom_polygon geom_quantile
+geom_raster geom_rect geom_ribbon geom_rug geom_segment geom_smooth geom_step geom_text geom_tile geom_violin geom_vline
+
+#stats
+stat_bin stat_bin2d stat_bindot stat_binhex stat_boxplot stat_contour stat_density stat_density2d stat_ecdf stat_function stat_identity stat_qq stat_quantile
+stat_smooth stat_spoke stat_sum stat_summary stat_summary_hex stat_summary2d stat_unique stat_ydensity
+
+#scales
+expand_limits
+guide_legend
+guide_colourbar(guide_colorbar)
+scale_alpha(scale_alpha_continuous, scale_alpha_discrete)
+scale_area
+scale_colour_brewer(scale_color_brewer, scale_fill_brewer)
+scale_colour_gradient(scale_color_continuous, scale_color_gradient, scale_colour_continuous, scale_fill_continuous, scale_fill_gradient)
+scale_colour_gradient2(scale_color_gradient2, scale_fill_gradient2) scale_colour_gradientn(scale_color_gradientn, scale_fill_gradientn) scale_colour_grey(scale_color_grey, scale_fill_grey)
+scale_colour_hue(scale_color_discrete, scale_color_hue, scale_colour_discrete, scale_fill_discrete, scale_fill_hue)
+scale_identity(scale_alpha_identity, scale_color_identity, scale_colour_identity, scale_fill_identity, scale_linetype_identity,
+scale_shape_identity, scale_size_identity)
+scale_manual(scale_alpha_manual, scale_color_manual, scale_colour_manual, scale_fill_manual, scale_linetype_manual, scale_shape_manual, scale_size_manual)
+scale_linetype(scale_linetype_continuous, scale_linetype_discrete)
+scale_shape(scale_shape_continuous, scale_shape_discrete)
+scale_size(scale_size_continuous, scale_size_discrete)
+scale_x_continuous(scale_x_log10, scale_x_reverse, scale_x_sqrt, scale_y_continuous, scale_y_log10, scale_y_reverse, scale_y_sqrt)
+scale_x_date(scale_y_date) scale_x_datetime(scale_y_datetime) scale_x_discrete(scale_y_discrete) labs(ggtitle, xlab, ylab) update_labels
+xlim(ylim)
+
+#Creating ggplots
+
+##ggplot __always__ operates (requires) a data frame
+
+Let's look at a data frame
+```{r}
+require(ggplot2)
+require(grid)
+data(diamonds)
+str(diamonds)
+str(diamonds[1])
+str(diamonds$carat)
+str(diamonds[[1]])
+str(diamonds$cut)
+class(str(diamonds[2]))
+class(str(diamonds[[2]]))
+class(diamonds[[2]])
+```
+
+Let's create a simple bar graph of cut several ways
+```{r}
+cut_bargraph_1 <- ggplot(diamonds, aes(x=diamonds$cut))
+str(cut_bargraph_1)
+cut_bargraph_1 + geom_bar() 
+
+cut_bargraph_2 <- ggplot(diamonds[2], aes(x=diamonds[[2]]))
+str(cut_bargraph_2)
+cut_bargraph_2 <- cut_bargraph_2 + geom_bar(fill="gray", colour="red") + labs(x=names(diamonds)[2])
+str(cut_bargraph_2)
+print(cut_bargraph_2)
+str(names(diamonds))
+class(names(diamonds)[2])
+cut_bargraph_2[2]
+str(colnames(diamonds)[2])
+rownames(diamonds)
+```
+
+Now let's print a couple histograms (count)
+```{r}
+Test_Frame <- diamonds[1]
+bin50 <- (max(Test_Frame[[1]])-min(Test_Frame[[1]]))/50
+Test_Plot <- ggplot(Test_Frame, aes(x=Test_Frame[[1]]))
+Test_Plot <- Test_Plot +
+  geom_histogram(colour = 'black',
+                 fill = 'gray',
+                 binwidth=bin50) +
+  labs(x=names(Test_Frame)[[1]])
+print(Test_Plot)
+```
+
+Now modify Test_Plot to become a density histogram...
+```{r}
+Test_Plot <- Test_Plot + aes(y=..density..) 
+
+Test_Plot + labs(y="Density")
+```
+
+Or just recreate Test_Plot...
+```{r}
+Test_Plot <- ggplot(Test_Frame, aes(x=Test_Frame[[1]]))
+Test_Plot <- Test_Plot + aes(y=..density..) +
+  geom_histogram(colour = 'black',
+                 fill = 'gray',
+                 binwidth=bin50) +
+  labs(x=names(Test_Frame)[[1]])
+print(Test_Plot)
+```
+
+Plotting variable bin sizes...
+```{r}
+Test_Frame <- diamonds
+binsizes <- c(3, 10, 20, 50, 75, 100)
+for(i in 1:length(binsizes)){
+  bins <- (max(Test_Frame[[1]])-min(Test_Frame[[1]]))/binsizes[i]
+  Test_Plot <- ggplot(Test_Frame, aes(x=Test_Frame[[1]]))
+  Test_Plot <- Test_Plot + aes(y=..density..) +
+    geom_histogram(colour = 'blue',
+                   fill = 'gray',
+                   binwidth=bins) +
+    labs(x=names(Test_Frame)[[1]])
+  print(Test_Plot)
+}
+```
+
+
+Can we plot from within a function?
+```{r}
+Handle_Num <- function(Num_Frame) 
+{
+  bin50 <- (max(Num_Frame[[1]])-min(Num_Frame[[1]]))/50
+  Num_Plot <- ggplot(Num_Frame, aes(x=Num_Frame[[1]]))
+  Num_Plot <- Num_Plot + aes(y=..density..) +
+    geom_histogram(colour = 'gray',
+                   fill = 'gray',
+                   binwidth=bin50) +
+    labs(x=names(Num_Frame)[[1]])
+  print(Num_Plot)
+}
+
+
+Handle_Num(diamonds[1])
+
+#Hmmm weird error - looks like my indexing is right.
+#Let's google ggplot2 Error in eval(expr, envir, enclos) : object 'Num_Frame' not found 
+
+#Added work around for scoping bug in ggplot
+Handle_Num2 <- function(Num_Frame) 
+{
+  bin50 <- (max(Num_Frame[[1]])-min(Num_Frame[[1]]))/50
+  Num_Plot <- ggplot(Num_Frame, aes(x=Num_Frame[[1]]),
+                    environment = environment())
+  Num_Plot <- Num_Plot + aes(y=..density..) +
+    geom_histogram(colour = 'gray',
+                   fill = 'gray',
+                   binwidth=bin50) +
+    labs(x=names(Num_Frame)[[1]])
+  print(Num_Plot)
+}
+
+Handle_Num2(diamonds[1])
+
+#Add loop in function for all variables, bin sizes and mean line
+Plot_Num <- function(Num_Frame, Bin_Sizes) 
+{
+  for (i in 1:length(Num_Frame))
+  {
+    for (bins in 1:length(Bin_Sizes))
+    {
+      #Calculate bin size
+      num_bins <- (max(Num_Frame[[i]])-min(Num_Frame[[i]]))/Bin_Sizes[bins]
+      
+      #Calculate the mean and label
+      col_mean <- mean(Num_Frame[[i]])
+      mean_Label = sprintf("%8.2f ", col_mean)
+      
+      #Plot regular count histogram
+      Num_Plot <- ggplot(Num_Frame, aes(x=Num_Frame[[i]]),
+                         environment = environment())
+      Num_Plot <- Num_Plot +
+        geom_histogram(colour = 'gray',
+                       fill = 'gray',
+                       binwidth=num_bins) +
+        labs(x=names(Num_Frame)[[i]]) +
+        geom_vline(xintercept=col_mean, colour='red') +
+        annotate("text",x=col_mean,y=0,label=mean_Label,hjust=0)
+      print(Num_Plot)
+      
+      #Plot denisty histogram
+      print(Num_Plot + aes(y=..density..) + labs(y="Density"))
+#       Num_Plot <- ggplot(Num_Frame, aes(x=Num_Frame[[i]]),
+#                          environment = environment())
+#       Num_Plot <- Num_Plot + aes(y=..density..) +
+#         geom_histogram(colour = 'gray',
+#                        fill = 'gray',
+#                        binwidth=num_bins) +
+#         labs(x=names(Num_Frame)[[i]]) +
+#         geom_vline(xintercept=col_mean, colour='red') +
+#         annotate("text",x=col_mean,y=0,label=mean_Label,hjust=0)
+#       print(Num_Plot)
+    } 
+  }
+}
+
+#Test it
+Plot_Num(diamonds[1], c(5,50))
+```
+
+
+
+
