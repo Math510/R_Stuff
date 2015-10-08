@@ -1,0 +1,589 @@
+Data Munging/Wrangling
+========================================================
+author: Kenny Darrell
+date: October 8, 2015
+autosize: true
+
+
+<style>
+
+/* slide titles */
+.reveal h3 { 
+  font-size: 70px;
+  color: blue;
+}
+
+.reveal big { 
+  font-size: 50px;
+}
+
+/* heading for slides with two hashes ## 
+.reveal .slides section .slideContent h2 {
+   font-size: 40px;
+   font-weight: bold;
+   color: green;
+} */
+
+/* ordered and unordered list styles 
+.reveal ul, 
+.reveal ol {
+    font-size: 50px;
+    color: red;
+    list-style-type: square;
+} */
+
+</style>
+
+
+
+
+
+What is it?
+========================================================
+width: 1920
+height: 1080
+
+<big>Data munging or data wrangling is the process of manually converting data from one "raw" form into another format that allows for more convenient consumption of the data.</big>
+
+
+Latent Aspect
+========================================================
+
+- You have heard about data storage
+- You have also heard about data analytics
+- And data visualizations
+- Not so much about data munging
+
+
+Why the Need
+========================================================
+
+- Data never comes in the correct format
+- Thus this step sits between storage and analytics/vis
+- This takes up roughly 80% of time/effort
+
+So what
+========================================================
+
+Making yourself 25% more efficient here give you 200% more time for analytics!
+
+
+Data Janitor, the unsung hero of Data Science
+========================================================
+
+[The big hurdle](http://www.nytimes.com/2014/08/18/technology/for-big-data-scientists-hurdle-to-insights-is-janitor-work.html?_r=0)
+
+[Most of the work](http://www.datasciencecentral.com/profiles/blogs/in-big-data-preparing-the-data-is-most-of-the-work)
+
+[One third of BI](http://www.fiercebigdata.com/story/nearly-third-bi-pros-are-still-mostly-data-janitors/2015-07-06)
+
+
+
+Pipes (brief detour)
+========================================================
+- structuring operations left-to-right (not from the inside and out)
+- avoid nested function calls
+- minimize the need for local variables and functions
+- make it easy to add steps anywhere in the sequence
+
+
+
+Which is more readable
+========================================================
+
+```{r, eval = F}
+bop_on(scoop_up(hop_through(foo_foo, forest), field_mouse), head)
+```
+
+or
+
+```{r, eval = F}
+foo_foo %>%
+  hop_through(forest) %>%
+  scoop_up(field_mouse) %>%
+  bop_on(head)
+```
+
+
+Tidy Data vs Untidy Data
+========================================================
+
+[Tidy Data](http://vita.had.co.nz/papers/tidy-data.pdf)
+
+[Good Data Management](https://www.prometheusresearch.com/good-data-management-practices-for-data-analysis-tidy-data-part-2/)
+
+
+Data Vocab
+========================================================
+
+[Vocabulary of Data](http://darrkj.github.io/blog/2015/apr282015/datavocab.html#/6)
+
+
+
+Setup
+========================================================
+
+```{r}
+options(stringsAsFactors = FALSE)
+library(dplyr)
+library(lubridate)
+library(purrr)
+library(ggplot2)
+```
+
+
+Lets get started
+========================================================
+
+[FEC Data Source](http://www.fec.gov/finance/disclosure/ftpdet.shtml#a2011_2012)
+
+
+
+Where do we really start?
+========================================================
+
+Always start with a question!
+
+Which presidental candidate made more money?
+
+
+
+Load Individual Donations
+========================================================
+
+```{r, cache = T}
+ind <- read.csv('data/indiv12.txt', sep = '|', 
+                skipNul = T, na.strings = '', 
+                header = F, quote = "")
+```
+
+```{r echo = F}
+head(ind)
+```
+
+The data has no names
+========================================================
+
+```{r}
+names(ind) <- names(read.csv('names/indiv_header_file.csv'))
+```
+
+```{r echo = F}
+head(ind)
+```
+
+
+
+
+What does any of it mean
+========================================================
+
+[Individual Contributions Data Dictionary](http://www.fec.gov/finance/disclosure/metadata/DataDictionaryContributionsbyIndividuals.shtml)
+
+
+
+Select
+========================================================
+Decrease the width of your data
+```{r}
+ind %>% 
+  select(CMTE_ID, TRANSACTION_TP, ENTITY_TP, 
+         TRANSACTION_DT, TRANSACTION_AMT) -> ind
+```
+```{r echo = F}
+head(ind)
+```
+
+Filter
+========================================================
+Decrease the height of your data
+```{r}
+ind %>% 
+  filter(TRANSACTION_TP == '15') %>% 
+  select(-TRANSACTION_TP) -> ind
+```
+```{r echo = F}
+head(ind)
+```
+
+
+
+
+Who are these people
+========================================================
+```{r}
+cand <- read.csv('data/cn12.txt', sep = '|', skipNul = T, 
+                 na.strings = '', header = F, quote = "")
+
+names(cand) <- names(read.csv('names/cn_header_file.csv'))
+```
+
+```{r echo = F}
+head(cand)
+```
+
+
+
+
+Select, Part Deux
+========================================================
+
+```{r}
+cand %>% 
+  select(CAND_ID, CAND_NAME, CAND_ELECTION_YR, 
+         CAND_OFFICE) -> cand
+```
+```{r echo = F}
+head(cand)
+```
+
+
+Filter, Part Deux
+========================================================
+
+```{r}
+cand %>% filter(CAND_OFFICE == 'P')  %>%
+  select(-CAND_OFFICE) -> cand
+```
+```{r echo = F}
+head(cand)
+```
+
+
+
+
+The missing link
+========================================================
+
+```{r}
+link <- read.csv('data/ccl12.txt', sep = '|', skipNul = T, 
+                 na.strings = '', header = F, quote = "")
+
+names(link) <- names(read.csv('names/ccl_header_file.csv'))
+```
+```{r echo = F}
+head(link)
+```
+
+
+
+Select Agian
+========================================================
+```{r}
+link %>% 
+  select(CAND_ID, CAND_ELECTION_YR, CMTE_ID) -> link
+```
+```{r echo = F}
+head(link)
+```
+
+
+Joins
+========================================================
+
+<div style="text-align:center"><img src ="joins.png" /></div>
+
+Joins
+========================================================
+
+Increase the width of the data
+
+```{r}
+cand %>% 
+  inner_join(link, by = c("CAND_ID", "CAND_ELECTION_YR")) -> df 
+```
+```{r echo = F}
+head(df)
+```
+
+Joins
+========================================================
+
+```{r}
+df %>% 
+  inner_join(ind, by = "CMTE_ID") -> df
+```
+```{r echo = F}
+head(df)
+```
+
+Cleanup
+========================================================
+
+```{r}
+df %>% 
+  select(-CAND_ID, -CMTE_ID) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+
+Date is not really date
+========================================================
+```{r}
+str(df)
+```
+
+Don't know when these happend!
+========================================================
+```{r}
+df[which(is.na(df$TRANSACTION_DT)), ]
+
+df %>%
+  filter(!is.na(TRANSACTION_DT)) -> df
+```
+
+
+
+
+Mutate to the Rescue
+========================================================
+
+```{r}
+df %>% 
+  mutate(date = as.Date(mdy(TRANSACTION_DT))) %>%
+  select(-TRANSACTION_DT) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+Too verbose
+========================================================
+
+```{r}
+df %>% 
+  rename(year = CAND_ELECTION_YR, 
+         amount = TRANSACTION_AMT,
+         type = ENTITY_TP) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+Name looks rough
+========================================================
+
+```{r}
+df$name <- paste(lapply(strsplit(df$CAND_NAME, ', '), `[`, 2),
+                 lapply(strsplit(df$CAND_NAME, ', '), `[`, 1))
+
+df %>% select(-CAND_NAME) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+
+Years
+========================================================
+
+```{r}
+df %>% 
+  filter(year == 2012) %>% 
+  select(-year) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+Only People
+========================================================
+
+```{r}
+df %>% 
+  filter(type %in% c('IND', 'CAN')) %>%
+  select(-type) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+
+Who?
+========================================================
+
+```{r}
+df %>% 
+  group_by(name) %>% 
+  summarise(obs = n()) -> popular
+```
+```{r echo = F}
+as.data.frame(popular)
+```
+
+
+
+Not Everybody
+========================================================
+
+```{r}
+df %>% 
+  semi_join(popular %>% top_n(10, obs), by = 'name') -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+Back to the Future
+========================================================
+
+```{r}
+df %>% 
+  filter(date < as.Date(mdy('11152012'))) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+From the average person
+========================================================
+
+```{r}
+df %>% 
+  filter(abs(amount) < 100000) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+Aggregations
+========================================================
+
+```{r, echo=FALSE}
+df %>% 
+  group_by(name, date) %>%
+  summarise(total = sum(amount)) -> df
+```
+```{r echo = F}
+head(df)
+```
+
+
+
+Missing Days
+========================================================
+
+```{r}
+allDates <- 
+  data.frame(date = as.Date(min(df$date) : max(df$date), 
+                            origin = origin))
+```
+
+Add them in
+========================================================
+
+```{r}
+df %>% 
+  split(.$name) %>%
+  map( ~ full_join(., 
+                   cbind(allDates, name = .$name[1]), 
+                   by = c("name", "date"))) %>%
+  bind_rows %>%
+  arrange(name, date) -> df
+```
+
+
+
+
+Zero them
+========================================================
+
+```{r}
+df$total <- ifelse(is.na(df$total), 0, df$total)
+```
+```{r echo = F}
+head(df)
+``````
+
+Order them
+========================================================
+
+```{r}
+df %>% 
+  arrange(name, date) -> df
+```
+```{r echo = F}
+head(df)
+``````
+
+
+Running total
+========================================================
+
+```{r}
+df %>% 
+  group_by(name) %>%
+  mutate(cum_tot = cumsum(total)) -> tot
+```
+```{r echo = F}
+head(tot)
+```
+
+
+
+
+
+
+Result
+========================================================
+
+```{r, eval = F}
+ggplot(tot, aes(x = date, y = cum_tot, 
+                color = name, group = name)) + geom_line()
+```
+<div style="text-align:center"><img src ="fec1.png" /></div>
+
+
+
+
+
+
+Total Money
+========================================================
+
+```{r}
+tot %>% 
+  group_by(name) %>%
+  summarise(max = max(cum_tot)) %>%
+  arrange(desc(max)) -> totals
+```
+```{r echo = F}
+totals
+```
+
+
+
+Modified Result
+========================================================
+
+```{r, eval = F}
+tot %>% 
+  anti_join(totals %>% top_n(2, max), by = 'name') %>%
+  ggplot(aes(x = date, y = cum_tot, 
+             color = name, group = name)) +
+  geom_line()
+```
+<div style="text-align:center"><img src ="fec2.png" /></div>
+
+
+What did we answer
+========================================================
+
+We changed the question quite a bit.
+
+Which presidental candidate made more money?
+
+Of the popular candidates in the 2012 Presidental Election, who recieved the most contributions from average people using observations that made temporal sense.
+
+For some definiton of the words popular and average.
+
