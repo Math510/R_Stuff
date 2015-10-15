@@ -1,0 +1,396 @@
+---
+title: "R - ggplot"
+output: html_document
+---
+
+Diamonds data set and explore the relationship of diamond weight (size) with price. We would expect larger diamonds to cost more.
+
+```{r}
+# Load grid package
+require("grid")
+
+# Create a promise to bring Diamonds data into memory
+data(diamonds)
+```
+
+Look at some of the probability distributions...
+```{r}
+hist_price <- ggplot(diamonds, aes(x=price))
+hist_price <- hist_price + geom_histogram(
+  aes(fill=factor(color), y=..density..), 
+  binwidth = 250,
+  position = "stack") + theme_gray(9) + 
+  labs(x="Price", y="Density") +
+  labs(title="Diamonds - Price") +
+  theme(plot.margin = unit(rep(0,4), "lines")) +
+  theme(legend.position = "none")
+print(hist_price)
+
+hist_carat <- ggplot(diamonds, aes(x=carat))
+hist_carat <- hist_carat + 
+  geom_histogram(aes(fill=factor(color), y=..density..), 
+  binwidth = 0.1,
+  position = "stack") + theme_gray(9) + 
+  labs(x="Weight", y="Density") +
+  labs(title="Diamonds - Carat") +
+  theme(plot.margin = unit(rep(0,4), "lines")) +
+  theme(legend.position = "none")
+print(hist_carat)
+
+color_prc <- ggplot(diamonds, aes(x=color))
+color_prc + geom_bar(fill="gray", colour="gray") +
+  labs(x="Color") + labs(title="Diamonds - Color")
+```
+
+```{r}
+
+# Plot relationship of carat on price by color
+carat_prc <- ggplot(diamonds, aes(x=carat,y=price))
+carat_prc + labs(title="Diamonds - Weight to Price by Color") +
+  theme(plot.title = element_text(size = rel(2), colour = "blue")) +
+  labs(x="Weight", y="Price") + 
+  geom_point(aes(color = factor(color)))
+```
+
+The relationship is not linear. If we are considering a linear regression model to predict price then we should see if we can transform the variables and create a more linear relationship.
+
+```{r}
+# Remove the non-linearity of the relationship
+diamonds$logprice <- log(diamonds$price)
+diamonds$logcarat <- log(diamonds$carat)
+diamonds$logdepth <- log(diamonds$depth)
+diamonds$logx <- log(diamonds$x+1)
+diamonds$logy <- log(diamonds$y+1)
+diamonds$logz <- log(diamonds$z+1)
+
+cor(diamonds$logcarat, diamonds$logprice)
+cor(diamonds$logdepth, diamonds$logprice)
+cor(diamonds$table, diamonds$logprice)
+cor(diamonds$logx, diamonds$logprice)
+cor(diamonds$logy, diamonds$logprice)
+cor(diamonds$logz, diamonds$logprice)
+
+diamonds$vol <- diamonds$logx*diamonds$logy*diamonds$logz
+cor(diamonds$vol, diamonds$logprice)
+
+cor(diamonds$vol, diamonds$carat)
+
+lcarat_prc <- ggplot(diamonds, aes(x=logcarat,y=logprice))
+lcarat_prc + labs(title="Diamonds - Weight to Price (Linear)") +
+  theme(plot.title = element_text(size = rel(2), colour = "blue")) +
+  labs(x="Weight", y="Price") + 
+  geom_point(aes(color = factor(color)))
+
+ldepth_prc <- ggplot(diamonds, aes(x=logdepth,y=logprice))
+ldepth_prc + labs(title="Diamonds - Depth to Price (Linear)") +
+  theme(plot.title = element_text(size = rel(2), colour = "blue")) +
+  labs(x="Depth", y="Price") + 
+  geom_point(aes(color = factor(color)))
+```
+
+Now we will fit a linear model to see if logcarat can be used to predict logprice.
+
+```{r}
+# Fit a linear model
+fit <- lm(logprice ~ logcarat, data=diamonds)
+str(fit)
+class(fit)
+diamonds$presids <- resid(fit)
+diamonds$pred <- predict(fit)
+
+dtmodel1_prc <- ggplot(diamonds, aes(x=logcarat,y=logprice))
+dtmodel1_prc <- dtmodel1_prc + 
+  labs(title="Diamonds - Price and Weight with Predictions") +
+  theme(plot.title = element_text(size = rel(2), colour = "blue")) +
+  labs(x="Weight", y="Price") +
+  geom_point(aes(color = factor(color))) +
+  theme(legend.position="top") +
+  geom_point(aes(color="red", y=pred))
+print(dtmodel1_prc)
+
+
+require(gvlma)
+gvmodel <- gvlma(fit)
+summary(gvmodel)
+```
+
+Let's plot the residuals and see if we can visualize the heteroscedasticity.
+
+```{r}
+dtcarat_prc <- ggplot(diamonds, aes(x=pred,y=presids))
+dtcarat_prc <- dtcarat_prc + 
+  labs(title="Diamonds - Residuals to Price and Weight") +
+  theme(plot.title = element_text(size = rel(2), colour = "blue")) +
+  labs(x="Predicted Price", y="Price Residuals") +
+  geom_point(aes(color = factor(color))) +
+  theme(legend.position="top")
+print(dtcarat_prc)
+
+errorhist <- ggplot(diamonds, aes(x=presids))
+errorhist <- errorhist + 
+  geom_histogram(aes(fill="gray", y=..density..), binwidth = 0.05) +
+  theme_gray(9) + 
+  labs(x="Error", y="Density") +
+  labs(title="Diamonds Error Distribution") +
+  theme(plot.margin = unit(rep(0,4), "lines")) +
+  theme(legend.position = "none")
+print(errorhist)
+```
+
+Assess the relationship between Color and Price
+```{r}
+# First, convert color to a numeric (integer) and test correlation
+diamonds$ColorNum <- as.numeric(diamonds$color)
+cor(diamonds$ColorNum, diamonds$price)
+
+# Another way is to bin price and look at a cross tabulation with
+# color
+diamonds$BinPrice <- ifelse(diamonds$price < 950, 
+        "1LOW", ifelse(diamonds$price <= 5324, "2MED", "3HIGH"))
+table(diamonds$color, diamonds$BinPrice)
+```
+
+Assess the relationship between clarity and price
+```{r}
+diamonds$ClarityNum <- as.numeric(diamonds$clarity)
+cor(diamonds$ClarityNum, diamonds$price)
+
+table(diamonds$clarity, diamonds$BinPrice)
+```
+
+Let's try to refit the model, adding our volume variable
+```{r}
+fit2 <- lm(logprice ~ logcarat+vol, data=diamonds)
+diamonds$presids2 <- resid(fit2)
+diamonds$pred2 <- predict(fit2)
+
+gvmodel2 <- gvlma(fit2)
+summary(gvmodel2)
+
+str(fit2)
+
+fit$coefficients
+fit2$coefficients
+```
+
+Let's look at the residuals
+```{r}
+dtcarat_prc2 <- ggplot(diamonds, aes(x=pred2,y=presids2))
+dtcarat_prc2 <- dtcarat_prc + 
+  labs(title="Model 2 - Residuals to Price by Weight and Volume") +
+  theme(plot.title = element_text(size = rel(2), colour = "blue")) +
+  labs(x="Price", y="Price Residuals") +
+  geom_point(aes(color = factor(color))) +
+  theme(legend.position="top")
+print(dtcarat_prc2)
+```
+
+```{r}
+# Create a density histogram of the price
+# factor(color)
+hist_price <- ggplot(diamonds, aes(x=price))
+hist_price <- hist_price + geom_histogram(
+  aes(colour=factor(color), y=..density..), 
+  binwidth = 100,
+  position = "stack") + theme_gray(9) + 
+  labs(x=NULL, y=NULL) +
+  theme(plot.margin = unit(rep(0,4), "lines")) +
+  theme(legend.position = "none")
+
+# Create a density histogram of the weight (carat)
+hist_carat <- ggplot(diamonds, aes(x=carat))
+hist_carat <- hist_carat + geom_histogram(
+  aes(colour=factor(color), y=..density..), 
+  binwidth = 0.05,
+  position = "stack") + theme_gray(9) + 
+  labs(x=NULL, y=NULL) +
+  theme(plot.margin = unit(rep(0,4), "lines")) +
+  theme(legend.position = "none")
+
+# Use grid viewports to create a plot with overlaid subplots
+subvp1 <- viewport(width=0.4, height=0.2, 
+                   x=0.2775, y=0.20)
+subvp2 <- viewport(width=0.4, height=0.2,
+                   x=0.775, y=0.675)
+dtcarat_prc
+print(hist_price, vp=subvp1)
+print(hist_carat, vp=subvp2)
+
+# Use grid layout to create a scatterhist plot similar
+# to MatLab
+grid.newpage()
+pushViewport(viewport(layout=grid.layout(10,10)))
+vplayout <- function(x,y,a) 
+  viewport(layout.pos.row = x,
+           layout.pos.col = y,
+           angle = a)
+vp3=vplayout(1:8,3:10,0)
+vp4=vplayout(7:8,3:7,90)
+vp5=vplayout(9:10,4:9,0)
+print(dtcarat_prc, vp=vp3)
+print(hist_price, vp=vp4)
+print(hist_carat, vp=vp5)
+```
+
+
+Following is an example of how to get a dataset from the web, load it into R and begin exploring the data.
+
+```{r}
+# UCI is a great resource for datasets. Here's an example of how to 
+# retrieve the Abalone data
+uciaddress <- "http://archive.ics.uci.edu/ml/machine-learning-databases/"
+dataset <- "abalone/abalone.data"
+getdataset <- paste(uciaddress, dataset, sep="")
+abalone <- read.csv(getdataset)
+str(abalone)
+
+```
+
+Now let's name the columns...
+
+```{r}
+
+colnames(abalone) <- c("Gender","Length","Diameter",
+                       "Height", "Whole_wgt",
+                       "Shucked_wgt", "Viscera wgt",
+                       "Shell wgt", "Rings")
+str(abalone)
+```
+
+Here's a method for get a random sample from a dataframe
+
+```{r}
+# Quick way to get a sample from a dataframe
+randomSample = function(dataframe,n,replacement) {     
+  return (dataframe[sample(nrow(dataframe), n, replace=replacement),]) }
+  
+absample<-randomSample(abalone, 40, FALSE)
+```
+
+Let's recode the gender attribute using our sample to demonstrate using nested ifelse(). We might want to do this to use Gender in a clustering algorithm.
+
+```{r}
+args(ifelse)
+absample$GenderInt <- ifelse(absample$Gender == 'M', 1, 
+       ifelse(absample$Gender == 'F', 2, 3))
+absample$GenderInt
+absample$Gender
+```
+
+Find the mean number of rings for each gender type
+```{r}
+?tapply
+tapply(absample$Rings, absample$Gender, mean)
+
+table(list(absample$Gender, absample$Rings))
+```
+
+How good is the sample relative to whole_wgt? How would you measure?
+```{r}
+summary(absample$Whole_wgt)
+summary(abalone$Whole_wgt)
+```
+
+How is Shell Wgt referenced?
+```{r}
+summary(absample$Shell wgt)
+summary(absample$"Shell wgt")
+```
+
+Create a new variable size as a binning of Whole_wgt
+```{r}
+absample$Size <- ifelse(absample$Whole_wgt < 0.85, 
+                        "SMALL", "LARGE")
+table(list(absample$Gender, absample$Size))
+```
+
+##Repeated measure data.
+Here we have subject, age, height, and occasion
+```{r}
+# ggplot oxboys data
+require(nlme, quiet = TRUE, warn.conflicts = FALSE)
+data(Oxboys)
+str(Oxboys)
+```
+
+Leave out the grouping variable
+```{r}
+p4 <- ggplot(Oxboys, aes(age, height))
+p4 + geom_line()
+```
+
+Now properly group
+```{r}
+p4 <- ggplot(Oxboys, aes(age, height, group = Subject))
+p4 + geom_line()
+p4 + geom_smooth(aes(group = Subject), method = "lm", se = F)
+```
+
+Added a smooth line for each subject, wanted a smooth line for the entire data
+```{r}
+p4 <- ggplot(Oxboys, aes(age, height, group = Subject))
+p4 <- p4 + geom_line()
+p4 + geom_smooth(aes(group = 1), method = "lm", size = 2, se = F)
+
+#Let's look at box plots
+p5 <- ggplot(Oxboys, aes(Occasion, height))
+p5 <- p5 + geom_boxplot()
+print(p5)
+p5 <- p5 + geom_line(aes(group = Subject), color="red")
+print(p5)
+```
+
+##Plotting different data sets on different layers   
+
+In the plots above, fitted lines for individuals doesn't use information about typical growth patterns and group fit ignores with-in subject correlation.   
+
+We can try a mixed model using the nlme package   
+```{r}
+model <- lme(height ~ age, data = Oxboys, 
+             random = ~ 1 + age | Subject)
+str(model)
+
+# Create base spaghetti plot
+p6 <- ggplot(Oxboys, aes(age, height, group = Subject))
+p6 <- p6 + geom_line()
+print(p6)
+
+# Get the predictions into a new data set
+age_grid <- seq(-1, 1, length = 10)
+subjects <- unique(Oxboys$Subject)
+preds <- expand.grid(age = age_grid, Subject = subjects)
+preds$height <- predict(model, preds)
+
+# Add the prediction layer from the new data set on
+# a new layer
+p6 <- p6 + geom_line(data = preds, color = "blue", 
+                     size = 0.4)
+print(p6)
+```
+
+Now lets look at the residuals   
+
+Add predictions to the original data
+```{r}
+Oxboys$fitted <- predict(model)
+# Now calculate the residuals
+Oxboys$resid <- with(Oxboys, fitted - height)
+str(Oxboys)
+
+# Now create the residuals plot
+p7 <- ggplot(Oxboys, aes(age, resid, group = Subject))
+p7 + geom_line() + geom_smooth(aes(group=1))
+```
+
+Looks like the residuals are not random indicating some signal that hasn't been captured in the model.  
+
+Add a polynomial term and refresh the data...
+```{r}
+model2 <- update(model, height ~ age + I(age^2))
+Oxboys$fitted2 <- predict(model2)
+Oxboys$resid2 <- with(Oxboys, fitted2 - height)
+
+# Now "refresh" the data in the base plot and re-plot
+p7 %+% Oxboys + aes(y=resid2) + geom_line() + geom_smooth(aes(group=1))
+```
+
